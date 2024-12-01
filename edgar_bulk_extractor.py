@@ -274,10 +274,18 @@ def convert_to_mds(file_path, filing_type):
     company_name = root.xpath('//CONFORMED-NAME')[0].text.strip()
     filing_date = root.xpath('//FILING-DATE')[0].text.strip()
     out_dir = f"output/{cik}_{filing_date}_{filing_type}.json"
+    file_postfix = 1
+
     if os.path.exists(out_dir):
-        print(f"Detected {out_dir}. skipping...")
-        return    
-    # print(f"Processing {file_path}...")
+        out_dir_w_postfix = f"output/{cik}_{filing_date}_{filing_type}_{file_postfix}.json"
+        
+        while os.path.exists(out_dir_w_postfix):
+            file_postfix += 1 
+            out_dir_w_postfix = f"output/{cik}_{filing_date}_{filing_type}_{file_postfix}.json"
+
+        out_dir = out_dir_w_postfix
+
+
     for document in documents:
         # print(document)
         document_tree = etree.fromstring(document, parser=parser)
@@ -374,14 +382,15 @@ def convert_to_mds(file_path, filing_type):
     output_data["main"] = md_main_data
     output_data["financials"] = fin_mds
 
-    with open(f"output/{cik}_{filing_date}_{filing_type}.json", "w") as f:
+    with open(out_dir, "w") as f:
         json.dump(output_data, f, indent=4)
+    return out_dir
 
 
 def try_convert_to_mds(file_path, filing_type):
     try:
-        convert_to_mds(file_path, filing_type)
-        return f"Processed {file_path}"
+        out_dir = convert_to_mds(file_path, filing_type)
+        return f"Processed {file_path} to {out_dir}"
     except Exception as e:
         with open("failed_to_process.txt", "a") as f:
             f.write(f"{file_path}\n")
@@ -445,5 +454,5 @@ if __name__ == "__main__":
             os.remove(f"temp/{file_name}")
 
             print(f"Processing {file_name} complete!")
-    
+
             
