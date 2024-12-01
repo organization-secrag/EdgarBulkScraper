@@ -277,7 +277,7 @@ def convert_to_mds(file_path, filing_type):
     if os.path.exists(out_dir):
         print(f"Detected {out_dir}. skipping...")
         return    
-    print(f"Processing {file_path}...")
+    # print(f"Processing {file_path}...")
     for document in documents:
         # print(document)
         document_tree = etree.fromstring(document, parser=parser)
@@ -425,15 +425,18 @@ if __name__ == "__main__":
             clean_directory(extracted_archive_path, docs)
             
             total_docs = len(docs)
-
+            print(f"Files to process: {total_docs}...")
+            display_counter = 0
             with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
                     # Submit the tasks to the executor
                     results = [executor.submit(try_convert_to_mds, doc[0], doc[1]) for doc in docs]
                     
                     # Retrieve the results as they are completed
                     for future in concurrent.futures.as_completed(results):
-                        print(future.result())
-            
+                        display_counter +=1
+                        print(future.result(), display_counter)
+
+            print(f"Processed number of docs: {display_counter} / {total_docs}")
             with open("archive_bookkeeping.txt", "a") as f:
                 f.write(file_name+"\n")
 

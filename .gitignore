@@ -1,0 +1,4 @@
+output/*.json
+temp/*.nc
+temp/*.tar.gz
+.venv/
