@@ -13,9 +13,21 @@ from pandas._libs.tslibs.np_datetime import OutOfBoundsDatetime
 from markdownify import markdownify as md
 import concurrent.futures
 # URL of the website to send the request to
+import argparse
 
-year = "2024"
-quarter = "1"
+# Create the argument parser
+parser = argparse.ArgumentParser(description="A simple command-line tool with year and quarter arguments")
+
+# Optional argument for year (e.g., 2024)
+parser.add_argument("-y", "--year", type=int, help="Year for processing", required=False)
+
+# Optional argument for quarter (1-4)
+parser.add_argument("-q", "--quarter", type=int, choices=[1, 2, 3, 4], help="Quarter for processing (1-4)", required=False)
+
+args = parser.parse_args()
+
+year = str(args.year)
+quarter = str(args.quarter)
 
 temp_path = "temp/"
 
@@ -26,19 +38,6 @@ headers = {
 }
 
 
-# # Send a GET request to the website
-# response = requests.get(url, headers=headers)
-
-# # Print the status code of the response
-# print(f"Status Code: {response.status_code}")
-
-# # Print the response content (HTML of the page)
-# print("Response Content:")
-# print(response.text)
-
-# links = re.findall("[0-9]*.nc.tar.gz",response.text)
-
-# print(links)
 
 
 from bs4 import BeautifulSoup
@@ -395,13 +394,6 @@ if __name__ == "__main__":
     # Send a GET request to the website
     response = requests.get(url, headers=headers)
 
-    # # Print the status code of the response
-    # print(f"Status Code: {response.status_code}")
-
-    # # Print the response content (HTML of the page)
-    # print("Response Content:")
-    # print(response.text)
-
     files = re.findall("[0-9]*.nc.tar.gz",response.text)
 
     for file_name in files:
@@ -432,11 +424,7 @@ if __name__ == "__main__":
             docs = check_files_in_directory(extracted_archive_path, ["10-K", "10-Q"])
             clean_directory(extracted_archive_path, docs)
             
-            # convert_to_mds("temp/20240229.nc/0000048465-24-000011.nc")
             total_docs = len(docs)
-            # for i, doc in enumerate(docs):
-            #     progress = i * 100 / total_docs
-            #     print(f"\rProcessing {doc[0]} | {round(progress, 2)}%       ", end="", flush=True)
 
             with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
                     # Submit the tasks to the executor
@@ -449,9 +437,10 @@ if __name__ == "__main__":
             with open("archive_bookkeeping.txt", "a") as f:
                 f.write(file_name+"\n")
 
-            for i in os.listdir(f"temp/{file_name}"):
-                os.remove(f"temp/{file_name}/{i}")
-            os.remove(extracted_archive_path)
+            for i in os.listdir(f"{extracted_archive_path}"):
+                os.remove(f"{extracted_archive_path}/{i}")
+            os.remove(f"temp/{file_name}")
+
             print(f"Processing {file_name} complete!")
     
             
