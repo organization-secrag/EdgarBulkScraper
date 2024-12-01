@@ -1,5 +1,6 @@
 import json
 import os
+import traceback
 import requests
 import re
 import tarfile
@@ -176,21 +177,44 @@ def check_type_in_xml(file_path, target_values):
         print(f"Error parsing {file_path}: Malformed XML")
         return False
 
+def check_file_in_directory(directory, target_values, dir_size, i, filename):
+    file_path = os.path.join(directory, filename)
+    progress = round(i * 100 / dir_size, 2)
+    # Check if the file is not a directory and is not empty
+    if os.path.isfile(file_path):
+
+        print(f"\rReading {filename} | {i+1}/{dir_size} | {progress}%         ", end="", flush=True)
+        found_str = check_type_in_xml(file_path, target_values)
+        return found_str, file_path
+    return None, None
+
 def check_files_in_directory(directory, target_values):
     # Iterate through all files in the directory
     dir_files = os.listdir(directory)
     dir_size = len(dir_files)
     docs_of_interest = []
-    for i, filename in enumerate(dir_files):
-        file_path = os.path.join(directory, filename)
-        progress = round(i * 100 / dir_size, 2)
-        # Check if the file is not a directory and is not empty
-        if os.path.isfile(file_path):
 
-            print(f"\rReading {filename} | {i+1}/{dir_size} | {progress}%         ", end="", flush=True)
-            found_str = check_type_in_xml(file_path, target_values)
-            if (found_str):
+    with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
+        # Submit the tasks to the executor
+        results = [executor.submit(check_file_in_directory, directory, target_values, dir_size, i, file) for i, file in enumerate(dir_files)]
+        
+        # Retrieve the results as they are completed
+        for future in concurrent.futures.as_completed(results):
+            found_str, file_path = future.result()
+            if found_str:
                 docs_of_interest.append([file_path, found_str])
+
+            # print(future.result(), display_counter)
+    # for i, filename in enumerate(dir_files):
+    #     file_path = os.path.join(directory, filename)
+    #     progress = round(i * 100 / dir_size, 2)
+    #     # Check if the file is not a directory and is not empty
+    #     if os.path.isfile(file_path):
+
+    #         print(f"\rReading {filename} | {i+1}/{dir_size} | {progress}%         ", end="", flush=True)
+    #         found_str = check_type_in_xml(file_path, target_values)
+    #         if (found_str):
+    #             docs_of_interest.append([file_path, found_str])
 
     print(f"\nFound {target_values} in {len(docs_of_interest)} files!")
     return docs_of_interest
@@ -407,7 +431,7 @@ def try_convert_to_mds(file_path, filing_type):
     except Exception as e:
         with open("failed_to_process.txt", "a") as f:
             f.write(f"{file_path}\n")
-        return f"Failed to process {file_path}: {str(e)}"
+        return f"Failed to process {file_path}: \n{traceback.format_exc()}\n{str(e)}"
 
 
 
