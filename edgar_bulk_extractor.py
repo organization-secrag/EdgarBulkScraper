@@ -253,6 +253,7 @@ def extract_financial_table_using_concepts(soup, concepts):
                 # break
     return None
 
+filings_of_interest = ["10-K", "10-Q", "10-K/A", "10-Q/A"]
 
 def convert_to_mds(file_path, filing_type):
 
@@ -273,7 +274,7 @@ def convert_to_mds(file_path, filing_type):
     cik = root.xpath('//CIK')[0].text.strip()
     company_name = root.xpath('//CONFORMED-NAME')[0].text.strip()
     filing_date = root.xpath('//FILING-DATE')[0].text.strip()
-    out_dir = f"output/{cik}_{filing_date}_{filing_type}.json"
+    out_dir = f"output/{cik}_{filing_date}_{filing_type.replace("/", "")}.json"
     file_postfix = 1
 
     if os.path.exists(out_dir):
@@ -294,7 +295,7 @@ def convert_to_mds(file_path, filing_type):
             if description.text == None:
                 continue
             processed_description = description.text.strip() 
-            if description is not None and processed_description in ["10-K", "10-Q"]:
+            if description is not None and processed_description in filings_of_interest:
                 # filing_type = processed_description
                 # print(f"{cik} | {company_name} | {filing_type} | {filing_date}")
 
@@ -430,7 +431,7 @@ if __name__ == "__main__":
         else:
             extract_archive(file_name)
             extracted_archive_path = temp_path+file_name.replace(".tar.gz", "")
-            docs = check_files_in_directory(extracted_archive_path, ["10-K", "10-Q"])
+            docs = check_files_in_directory(extracted_archive_path, filings_of_interest)
             clean_directory(extracted_archive_path, docs)
             
             total_docs = len(docs)
