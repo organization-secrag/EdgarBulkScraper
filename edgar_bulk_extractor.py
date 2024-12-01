@@ -19,15 +19,23 @@ import argparse
 parser = argparse.ArgumentParser(description="A simple command-line tool with year and quarter arguments")
 
 # Optional argument for year (e.g., 2024)
-parser.add_argument("-y", "--year", type=int, help="Year for processing", required=False)
+parser.add_argument("-y", "--year", type=int, help="Year for processing", required=True)
 
 # Optional argument for quarter (1-4)
-parser.add_argument("-q", "--quarter", type=int, choices=[1, 2, 3, 4], help="Quarter for processing (1-4)", required=False)
+parser.add_argument("-q", "--quarter", type=int, choices=[1, 2, 3, 4], help="Quarter for processing (1-4)", required=True)
+
+parser.add_argument("-t", "--threads", type=int, choices=[1, 2, 3, 4, 5, 6, 7, 8], help="Threads for Filing processor (1-8) Default: 4", required=False)
+
+parser.add_argument('--debug', action='store_true', help="Run once and then exit. Do not override existing filings")
+
 
 args = parser.parse_args()
 
+
+
 year = str(args.year)
 quarter = str(args.quarter)
+threads = args.threads if args.threads else 4
 
 temp_path = "temp/"
 
@@ -125,11 +133,12 @@ def download_archive(file_name):
         raise Exception(response.status_code, response.text)
 
 def extract_archive(file_name):
-    if os.path.exists(temp_path+file_name.replace(".tar.gz", "")):
-        print(f"{temp_path+file_name.replace(".tar.gz", "")} extract path already exists! Delete the path to trigger extraction.")
+    extract_path = temp_path+file_name.replace(".tar.gz", "")
+    if os.path.exists(extract_path):
+        print(f"{extract_path} extract path already exists! Delete the path to trigger extraction.")
         return
     print(f"Extracting {file_name}...\n")
-    extract_path = temp_path+file_name.replace(".tar.gz", "")
+    # extract_path = temp_path+file_name.replace(".tar.gz", "")
     with tarfile.open(temp_path+file_name, "r:gz") as archive:
         # Extract all files to the specified directory
         members = archive.getmembers()
@@ -274,15 +283,18 @@ def convert_to_mds(file_path, filing_type):
     cik = root.xpath('//CIK')[0].text.strip()
     company_name = root.xpath('//CONFORMED-NAME')[0].text.strip()
     filing_date = root.xpath('//FILING-DATE')[0].text.strip()
-    out_dir = f"output/{cik}_{filing_date}_{filing_type.replace("/", "")}.json"
+    filtered_filing_type = filing_type.replace("/", "")
+    out_dir = f"output/{cik}_{filing_date}_{filtered_filing_type}.json"
     file_postfix = 1
 
     if os.path.exists(out_dir):
-        out_dir_w_postfix = f"output/{cik}_{filing_date}_{filing_type}_{file_postfix}.json"
-        
+        out_dir_w_postfix = f"output/{cik}_{filing_date}_{filtered_filing_type}_{file_postfix}.json"
+        if args.debug:
+            print("Skipping via debug...")
+            return
         while os.path.exists(out_dir_w_postfix):
             file_postfix += 1 
-            out_dir_w_postfix = f"output/{cik}_{filing_date}_{filing_type}_{file_postfix}.json"
+            out_dir_w_postfix = f"output/{cik}_{filing_date}_{filtered_filing_type}_{file_postfix}.json"
 
         out_dir = out_dir_w_postfix
 
@@ -437,7 +449,7 @@ if __name__ == "__main__":
             total_docs = len(docs)
             print(f"Files to process: {total_docs}...")
             display_counter = 0
-            with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
                     # Submit the tasks to the executor
                     results = [executor.submit(try_convert_to_mds, doc[0], doc[1]) for doc in docs]
                     
@@ -455,5 +467,7 @@ if __name__ == "__main__":
             os.remove(f"temp/{file_name}")
 
             print(f"Processing {file_name} complete!")
-
+            if args.debug:
+                print("Exiting due to debug mode.")
+                quit()
             
