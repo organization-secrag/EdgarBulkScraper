@@ -293,7 +293,8 @@ def convert_to_mds(file_path, filing_type):
     doc_pattern = r'<DOCUMENT.*?>.*?</DOCUMENT>'
     html_pattern = r'<html.*?>.*?</html>'
     html_stupid_pattern = r'<HTML.*?>.*?</HTML>'
-    xbrl_exhibit_pattern = r'<\?xml.*?>.*?</.*?linkbase>'
+    xbrl_exhibit_pattern = r'<TEXT>.*?</TEXT>' # Relaxed
+    xbrl_instance_pattern = r'<XBRL>.*?</XBRL>' # Now we process instance XBRL as well
     xbrl_pattern = r'<\?xml.*?>.*?</xbrl>'
     xbrl_schema_pattern = r'<\?xml.*?>.*?</.*?schema>'
     xbrl_parsed_docs = {}
@@ -356,6 +357,8 @@ def convert_to_mds(file_path, filing_type):
                 # print("XBRL found:",exhibit_name)
                 if exhibit_name == "schema":  
                     xbrl_parsed_docs[exhibit_name] = re.findall(xbrl_schema_pattern, document, re.DOTALL)[0]
+                elif exhibit_name == "instance": # First time Instance exhibit occurence resulted in an infinite loop?
+                    xbrl_parsed_docs[exhibit_name] = re.findall(xbrl_instance_pattern, document, re.DOTALL)[0]
                 else:
                     xbrl_parsed_docs[exhibit_name] = re.findall(xbrl_exhibit_pattern, document, re.DOTALL)[0]
             
