@@ -173,7 +173,7 @@ def check_type_in_xml(file_path, target_values):
                 return value
         # print(f"{target_values} not found in {file_path}")
         return False
-    except etree.XMLSyntaxError:
+    except Exception:
         print(f"Error parsing {file_path}: Malformed XML")
         return False
 
